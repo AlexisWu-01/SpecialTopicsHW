@@ -28,7 +28,8 @@ class BBTreeNode():
         Bulids the initial Picos problem
         '''
         prob=pic.Problem()
-   
+        if not isinstance(self.constraints,list):
+            self.constraints = list(self.constraints.values())
         prob.add_list_of_constraints(self.constraints)    
         
         prob.set_objective('max', self.objective)
@@ -40,7 +41,7 @@ class BBTreeNode():
         Checks if all variables (excluding the one we're maxing) are integers
         '''
         for v in self.vars[:-1]:
-            if v.value == None or abs(round(v.value) - float(v.value)) > 1e-4 :
+            if v.value == None or abs(round(v.value) - float(v.value)) > 1e-6 :
                 return False
         return True
 
@@ -58,10 +59,11 @@ class BBTreeNode():
         Makes a child where xi >= ceiling(xi)
         '''
         n2 = deepcopy(self)
+
         n2.prob.add_constraint( branch_var >= math.ceil(branch_var.value) ) # add in the new binary constraint
         return n2
 
-
+  
     def bbsolve(self):
         '''
         Use the branch and bound method to solve an integer program
@@ -75,12 +77,33 @@ class BBTreeNode():
         # these lines build up the initial problem and adds it to a heap
         root = self
         res = root.buildProblem().solve(solver='cvxopt')
-        heap = [(res, next(counter), root)]
+        heap = [(res.value, next(counter), root)]
         bestres = -1e20 # a small arbitrary initial best objective value
         bestnode_vars = root.vars # initialize bestnode_vars to the root vars
-
         #TODO: fill this part in
+        nodecount = 0
+        while len(heap) > 0: 
+            nodecount += 1 
+            _, _, node = heappop(heap)
+            prob = node.buildProblem()
+            try:
+                res = prob.solve(solver='cvxopt')
+                if prob.status not in ["infeasible", "unbounded"]:
+                    if round(res.value,2) <= bestres: 
+                        pass
+                    elif node.is_integral(): #valid Solution
+                            bestres = round(res.value)
+                            bestnode_vars = node.vars
+               
+                    else: 
+                        for v in node.vars:
+                            n1 = node.branch_floor(v)
+                            n2 = node.branch_ceil(v)
+                            heappush(heap, (res.value, next(counter), n1 ) )
+                            heappush(heap, (res.value, next(counter), n2 ) )
+            except:
+                pass
+        return bestres, bestnode_vars
 
         
-        return bestres, bestnode_vars
  

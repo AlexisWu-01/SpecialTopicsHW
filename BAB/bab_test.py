@@ -19,12 +19,13 @@ def problem1():
     constraints = [z == x + y, -5*x + 4* y <= 0, 6*x+2*y <= 17, x >= 0, y >= 0]
     root = BBTreeNode(constraints = constraints, objective = objective, vars = vars)
     res, sol_vars = root.bbsolve()
-
+    # print(res,[v.value for v in sol_vars])
     correct_vals = [2.0, 2.0, 4.0]
 
     check_index = 0
 
     while check_index < len(correct_vals):
+
         try:
             assert(abs(correct_vals[check_index] - float(sol_vars[check_index])) < 1e-4)
         except AssertionError:
